@@ -40,6 +40,7 @@ class Scheduling{
         // check process's names if empty
         this.processes.forEach((p, i) => {
             p.name = p.name.length ? p.name : `P${i + 1}`;
+            //p.queue_time = p.queue_time ? p.queue_time : i;
         });
         //this.processes = sortArrayByObjectValue(this.processes, 'queue_time');
 
@@ -95,10 +96,47 @@ class Scheduling{
     fcfs(processes = this.processes){
         this.algorithm_name = 'First Come First Served (FCFS)';
 
+        // check is sort need
+        let prev_queue_time = 0;
+        let is_sort_needed = false;
+        processes.forEach(p => {
+            if(prev_queue_time !== p.queue_time){
+                is_sort_needed = true;
+            }
+            prev_queue_time = p.queue_time;
+        });
+
         // sort by queue time
-        processes = sortArrayByObjectValue(processes, 'queue_time');
+        processes = is_sort_needed ? sortArrayByObjectValue(processes, 'queue_time') : processes;
 
         // exe
+        processes.forEach(p => {
+            // run this process
+            p.status = 'running';
+
+            const cpu_time_needed = Math.min(p.remaining_time, p.burst_time);
+            p.waiting_time = this.current_cpu_time - p.queue_time;
+            p.remaining_time -= cpu_time_needed;
+
+            if(p.remaining_time === 0){
+                p.status = 'terminated';
+                this.terminated_count++;
+            }
+
+            // save to schedule history
+            this.queue.push({
+                name: p.name,
+                waiting_time: p.waiting_time,
+                cpu_start: this.current_cpu_time,
+                cpu_end: this.current_cpu_time + cpu_time_needed,
+                status: p.status,
+                process: p
+            });
+
+            // update schedule data
+            this.current_cpu_time += cpu_time_needed;
+            this.total_waiting_time += p.waiting_time;
+        })
     }
 
     sjf(processes = this.processes){
@@ -217,6 +255,16 @@ class Scheduling{
 //         new Process({queue_time: 4, burst_time: 5}),
 //     ]
 // });
+
+// Lesson02/p28
+new Scheduling({
+    algorithm: 'FCFS',
+    processes: [
+        new Process({burst_time: 24}),
+        new Process({burst_time: 3}),
+        new Process({burst_time: 3}),
+    ]
+});
 
 // Lesson02/p33
 new Scheduling({
