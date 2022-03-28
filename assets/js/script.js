@@ -18,7 +18,7 @@ class Process{
         //this.pid = ''; // process identifier
 
         // preemptive, non-preemptive
-        this.decision_mode = 'preemptive';
+        this.decision_mode = 'non-preemptive';
 
 
         this.waiting_time = 0;
@@ -34,6 +34,7 @@ class Scheduling{
         this.processes.forEach((p, i) => {
             p.name = p.name.length ? p.name : `P${i + 1}`;
         });
+        console.log('List of processes:')
         console.table(this.processes)
 
         // FCFS, SJF, RR
@@ -44,12 +45,21 @@ class Scheduling{
             this.schedule_history = [];
             this.cpu_time = 0;
             this.total_waiting_time = 0;
+            this.algorithm_name = '';
 
             switch(a){
                 case 'FCFS':
                     this.fcfs();
                     break;
+                case 'SJF':
+                    this.sjf();
+                    break;
+                default:
+                    this.fcfs();
             }
+
+
+            console.log('---------> Scheduling algorithm:', this.algorithm_name)
 
             console.table(this.schedule_history);
             console.log('Total CPU time:', this.cpu_time);
@@ -66,12 +76,26 @@ class Scheduling{
     }
 
     fcfs(){
-        const name = 'First Come First Served (FCFS)';
-        console.log('Scheduling algorithm:', name)
+        this.algorithm_name = 'First Come First Served (FCFS)';
 
         // sort by queue time
         this.processes = sortArrayByObjectValue(this.processes, 'queue_time');
 
+        // exe
+        this.execute_processes();
+    }
+
+    sjf(){
+        this.algorithm_name = 'Shortest-Job-First (SJF)';
+
+        // sort by burst time
+        this.processes = sortArrayByObjectValue(this.processes, 'burst_time');
+
+        // exe
+        this.execute_processes();
+    }
+
+    execute_processes(){
         // process one by one
         this.processes.forEach((p, i) => {
             p.waiting_time = this.cpu_time;
@@ -93,7 +117,7 @@ class Scheduling{
 
 // Question 1
 const cpu_scheduling = new Scheduling({
-    algorithms: ['FCFS'],
+    algorithms: ['FCFS', 'SJF'],
     processes: [
         new Process({queue_time: 0, burst_time: 10}),
         new Process({queue_time: 2, burst_time: 1}),
