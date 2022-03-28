@@ -18,24 +18,31 @@ class Process{
         //this.pid = ''; // process identifier
 
         // preemptive, non-preemptive
-        this.decision_mode = 'non-preemptive';
+        //this.decision_mode = 'non-preemptive';
 
-
+        this.cpu_time = 0;
         this.waiting_time = 0;
-
         this.remaining_time = this.burst_time;
+        this.response_time = 0;
+        this.turnaround_time = 0;
     }
 }
 
 class Scheduling{
     constructor(options){
-        this.processes = options.processes || []; // list of processes
+        this.loop_step = 1;
+        this.loop_count = 0;
+        this.loop_max = 20;
+
         this.quantum_time = options.quantum_time || 1;
+        this.processes = options.processes || []; // list of processes
 
         // check process's names if empty
         this.processes.forEach((p, i) => {
             p.name = p.name.length ? p.name : `P${i + 1}`;
         });
+        //this.processes = sortArrayByObjectValue(this.processes, 'queue_time');
+
         console.log('List of processes:')
         console.table(this.processes)
 
@@ -43,8 +50,9 @@ class Scheduling{
         this.algorithm = options.algorithm || 'FCFS';
 
         // run algorithm
-        this.schedule_history = [];
-        this.cpu_time = 0;
+        this.terminated_count = 0;
+        this.queue = [];
+        this.current_cpu_time = 0;
         this.total_waiting_time = 0;
         this.algorithm_name = '';
 
@@ -65,17 +73,23 @@ class Scheduling{
 
         console.log('---------> Scheduling algorithm:', this.algorithm_name)
 
-        console.table(this.schedule_history);
-        console.log('Total CPU time:', this.cpu_time);
+        console.table(this.queue);
+        console.log('Total CPU time:', this.current_cpu_time);
         console.log('Total waiting time:', this.total_waiting_time);
         console.log('Average waiting time:', this.awt());
+        console.log('Throughput:', this.throughput());
 
-        console.log('Done!')
+        console.log('Done! <---------')
     }
 
     // average waiting time
     awt(){
         return this.total_waiting_time / this.processes.length;
+    }
+
+    // average waiting time
+    throughput(){
+        return Math.round(this.processes.length / this.current_cpu_time * 10000) / 10000;
     }
 
     fcfs(processes = this.processes){
@@ -85,17 +99,75 @@ class Scheduling{
         processes = sortArrayByObjectValue(processes, 'queue_time');
 
         // exe
-        this.execute_processes(processes);
     }
 
     sjf(processes = this.processes){
         this.algorithm_name = 'Shortest-Job-First (SJF)';
 
-        // sort by burst time
-        processes = sortArrayByObjectValue(processes, 'burst_time');
+        // keep looping until all processes are terminated
+        for(let i = this.loop_count; i += this.loop_step; i < this.loop_max){
+            // check new processes if they are ready for cpu burst
+            processes.forEach(p => {
+                // READY
+                if(p.queue_time <= this.current_cpu_time && p.status === 'new'){
+                    p.status = 'ready';
+                }
+            });
 
-        // exe
-        this.execute_processes(processes);
+            // find the process using the "s" function
+            const p = this.s(processes)
+
+            if(p){
+                // run this process
+                p.status = 'running';
+
+                const cpu_time_needed = Math.min(p.remaining_time, p.burst_time);
+                p.waiting_time = this.current_cpu_time - p.queue_time;
+                p.remaining_time -= cpu_time_needed;
+
+                if(p.remaining_time === 0){
+                    p.status = 'terminated';
+                    this.terminated_count++;
+                }
+
+                // save to schedule history
+                this.queue.push({
+                    name: p.name,
+                    waiting_time: p.waiting_time,
+                    cpu_start: this.current_cpu_time,
+                    cpu_end: this.current_cpu_time + cpu_time_needed,
+                    status: p.status,
+                    process: p
+                });
+
+                // update schedule data
+                this.current_cpu_time += cpu_time_needed;
+                this.total_waiting_time += p.waiting_time;
+            }
+
+
+            // ----------------------------------
+            // avoid starvation
+            this.loop_count += this.loop_step;
+            if(this.loop_count >= this.loop_max) this.is_finished = true;
+
+            if(this.terminated_count === this.processes.length) this.is_finished = true;
+
+            // finish scheduling
+            if(this.is_finished) break;
+        }
+    }
+
+    // return the process with the shortest CPU burst
+    s(processes){
+        // get all ready processes
+        const ready_processes = processes.filter(p => p.status === 'ready');
+        if(ready_processes.length === 1) return ready_processes[0];
+
+        // get min burst time
+        const min_burst_time = Math.min(...ready_processes.map(p => p.burst_time));
+
+        return ready_processes.filter(p => p.burst_time === min_burst_time)[0];
     }
 
     rr(processes = this.processes){
@@ -109,7 +181,7 @@ class Scheduling{
 
                 const cpu_time_needed = Math.min(p.remaining_time, this.quantum_time);
                 p.status = 'running';
-                p.waiting_time += this.cpu_time;
+                p.waiting_time += this.current_cpu_time;
                 p.remaining_time -= cpu_time_needed;
 
                 if(p.remaining_time === 0 && p.status !== 'terminated'){
@@ -118,47 +190,25 @@ class Scheduling{
                 }
 
                 // save to schedule history
-                this.schedule_history.push({
+                this.queue.push({
                     process: p.name,
                     waiting_time: p.waiting_time,
-                    cpu_start: this.cpu_time,
-                    cpu_end: this.cpu_time + cpu_time_needed,
+                    cpu_start: this.current_cpu_time,
+                    cpu_end: this.current_cpu_time + cpu_time_needed,
                     status: p.status
                 });
 
                 // update schedule data
-                this.cpu_time += cpu_time_needed;
+                this.current_cpu_time += cpu_time_needed;
                 this.total_waiting_time += p.waiting_time;
             });
         }
-    }
-
-    execute_processes(processes = this.processes){
-        // process one by one
-        processes.forEach((p, i) => {
-            p.waiting_time += this.cpu_time;
-            p.remaining_time -= p.burst_time;
-            p.status = 'terminated';
-
-            // save to schedule history
-            this.schedule_history.push({
-                process: p.name,
-                waiting_time: p.waiting_time,
-                cpu_start: this.cpu_time,
-                cpu_end: this.cpu_time + p.burst_time,
-            });
-
-            // update schedule data
-            this.cpu_time += p.burst_time;
-            this.total_waiting_time += p.waiting_time;
-        });
     }
 }
 
 // Question 1
 // const cpu_scheduling = new Scheduling({
-//     algorithms: ['FCFS', 'SJF', 'RR'],
-//     quantum_time: 2,
+//     algorithm: 'SJF',
 //     processes: [
 //         new Process({queue_time: 0, burst_time: 10}),
 //         new Process({queue_time: 2, burst_time: 1}),
@@ -168,13 +218,24 @@ class Scheduling{
 //     ]
 // });
 
-const cpu_scheduling = new Scheduling({
-    algorithm: 'RR',
-    quantum_time: 20,
+// Lesson02/p33
+new Scheduling({
+    algorithm: 'SJF',
     processes: [
-        new Process({burst_time: 53}),
-        new Process({burst_time: 17}),
-        new Process({burst_time: 68}),
-        new Process({burst_time: 24}),
+        new Process({queue_time: 0, burst_time: 7}),
+        new Process({queue_time: 2, burst_time: 4}),
+        new Process({queue_time: 4, burst_time: 1}),
+        new Process({queue_time: 5, burst_time: 4}),
     ]
 });
+
+// const cpu_scheduling2 = new Scheduling({
+//     algorithm: 'RR',
+//     quantum_time: 20,
+//     processes: [
+//         new Process({burst_time: 53}),
+//         new Process({burst_time: 17}),
+//         new Process({burst_time: 68}),
+//         new Process({burst_time: 24}),
+//     ]
+// });
