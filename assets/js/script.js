@@ -22,13 +22,15 @@ class Process{
 
 
         this.waiting_time = 0;
+
+        this.remaining_time = this.burst_time;
     }
 }
 
 class Scheduling{
     constructor(options){
         this.processes = options.processes || []; // list of processes
-
+        this.quantum_time = options.quantum_time || 1;
 
         // check process's names if empty
         this.processes.forEach((p, i) => {
@@ -38,36 +40,37 @@ class Scheduling{
         console.table(this.processes)
 
         // FCFS, SJF, RR
-        this.algorithms = options.algorithms || ['FCFS'];
+        this.algorithm = options.algorithm || 'FCFS';
 
         // run algorithm
-        this.algorithms.forEach((a, i) => {
-            this.schedule_history = [];
-            this.cpu_time = 0;
-            this.total_waiting_time = 0;
-            this.algorithm_name = '';
+        this.schedule_history = [];
+        this.cpu_time = 0;
+        this.total_waiting_time = 0;
+        this.algorithm_name = '';
 
-            switch(a){
-                case 'FCFS':
-                    this.fcfs();
-                    break;
-                case 'SJF':
-                    this.sjf();
-                    break;
-                default:
-                    this.fcfs();
-            }
+        switch(this.algorithm){
+            case 'FCFS':
+                this.fcfs();
+                break;
+            case 'SJF':
+                this.sjf();
+                break;
+            case 'RR':
+                this.rr();
+                break;
+            default:
+                this.fcfs();
+        }
 
 
-            console.log('---------> Scheduling algorithm:', this.algorithm_name)
+        console.log('---------> Scheduling algorithm:', this.algorithm_name)
 
-            console.table(this.schedule_history);
-            console.log('Total CPU time:', this.cpu_time);
-            console.log('Total waiting time:', this.total_waiting_time);
-            console.log('Average waiting time:', this.awt());
+        console.table(this.schedule_history);
+        console.log('Total CPU time:', this.cpu_time);
+        console.log('Total waiting time:', this.total_waiting_time);
+        console.log('Average waiting time:', this.awt());
 
-            console.log('Done!')
-        });
+        console.log('Done!')
     }
 
     // average waiting time
@@ -75,30 +78,67 @@ class Scheduling{
         return this.total_waiting_time / this.processes.length;
     }
 
-    fcfs(){
+    fcfs(processes = this.processes){
         this.algorithm_name = 'First Come First Served (FCFS)';
 
         // sort by queue time
-        this.processes = sortArrayByObjectValue(this.processes, 'queue_time');
+        processes = sortArrayByObjectValue(processes, 'queue_time');
 
         // exe
-        this.execute_processes();
+        this.execute_processes(processes);
     }
 
-    sjf(){
+    sjf(processes = this.processes){
         this.algorithm_name = 'Shortest-Job-First (SJF)';
 
         // sort by burst time
-        this.processes = sortArrayByObjectValue(this.processes, 'burst_time');
+        processes = sortArrayByObjectValue(processes, 'burst_time');
 
         // exe
-        this.execute_processes();
+        this.execute_processes(processes);
     }
 
-    execute_processes(){
+    rr(processes = this.processes){
+        this.algorithm_name = 'Round Robin (RR)';
+
+        // process by quantum time
+        let is_finished = processes.filter(p => p.status !== 'terminated').length;
+        while(is_finished > 0){
+            processes.forEach((p, i) => {
+                if(p.status === 'terminated') return;
+
+                const cpu_time_needed = Math.min(p.remaining_time, this.quantum_time);
+                p.status = 'running';
+                p.waiting_time += this.cpu_time;
+                p.remaining_time -= cpu_time_needed;
+
+                if(p.remaining_time === 0 && p.status !== 'terminated'){
+                    p.status = 'terminated';
+                    is_finished--;
+                }
+
+                // save to schedule history
+                this.schedule_history.push({
+                    process: p.name,
+                    waiting_time: p.waiting_time,
+                    cpu_start: this.cpu_time,
+                    cpu_end: this.cpu_time + cpu_time_needed,
+                    status: p.status
+                });
+
+                // update schedule data
+                this.cpu_time += cpu_time_needed;
+                this.total_waiting_time += p.waiting_time;
+            });
+        }
+    }
+
+    execute_processes(processes = this.processes){
         // process one by one
-        this.processes.forEach((p, i) => {
-            p.waiting_time = this.cpu_time;
+        processes.forEach((p, i) => {
+            p.waiting_time += this.cpu_time;
+            p.remaining_time -= p.burst_time;
+            p.status = 'terminated';
 
             // save to schedule history
             this.schedule_history.push({
@@ -116,13 +156,25 @@ class Scheduling{
 }
 
 // Question 1
+// const cpu_scheduling = new Scheduling({
+//     algorithms: ['FCFS', 'SJF', 'RR'],
+//     quantum_time: 2,
+//     processes: [
+//         new Process({queue_time: 0, burst_time: 10}),
+//         new Process({queue_time: 2, burst_time: 1}),
+//         new Process({queue_time: 3, burst_time: 5}),
+//         new Process({queue_time: 1, burst_time: 1}),
+//         new Process({queue_time: 4, burst_time: 5}),
+//     ]
+// });
+
 const cpu_scheduling = new Scheduling({
-    algorithms: ['FCFS', 'SJF'],
+    algorithm: 'RR',
+    quantum_time: 20,
     processes: [
-        new Process({queue_time: 0, burst_time: 10}),
-        new Process({queue_time: 2, burst_time: 1}),
-        new Process({queue_time: 3, burst_time: 5}),
-        new Process({queue_time: 1, burst_time: 1}),
-        new Process({queue_time: 4, burst_time: 5}),
+        new Process({burst_time: 53}),
+        new Process({burst_time: 17}),
+        new Process({burst_time: 68}),
+        new Process({burst_time: 24}),
     ]
 });
