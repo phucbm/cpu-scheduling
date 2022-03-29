@@ -19,6 +19,7 @@ class Process{
         //this.decision_mode = 'non-preemptive';
 
         this.cpu_time = 0;
+        this.cpu_end_time = 0;
         this.waiting_time = 0;
         this.remaining_time = this.burst_time;
         this.response_time = 0;

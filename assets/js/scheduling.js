@@ -87,27 +87,47 @@ class Scheduling{
     /**
      * Process Control Block
      * @param p
+     * @param quantum_time
      */
-    processControl(p){
-        // run this process
-        p.status = 'running';
+    processControl(p, quantum_time = 9999999){
+        if(p.status === 'terminated') return;
 
-        const cpu_time_needed = Math.min(p.remaining_time, p.burst_time);
-        p.waiting_time = this.current_cpu_time - p.queue_time;
+        // run this process
+        let status_history = p.status;
+        p.status = 'running';
+        status_history += ` -> ${p.status}`;
+
+        const cpu_time_needed = Math.min(p.remaining_time, p.burst_time, quantum_time);
+
+        // waiting time
+        if(p.waiting_time === 0){
+            p.waiting_time = this.current_cpu_time - p.queue_time;
+        }else{
+            p.waiting_time += this.current_cpu_time - p.cpu_end_time;
+        }
+
+        // remaining time
         p.remaining_time -= cpu_time_needed;
 
+        // CPU end time
+        p.cpu_end_time = this.current_cpu_time + cpu_time_needed;
+
+        // update status
         if(p.remaining_time === 0){
             p.status = 'terminated';
             this.terminated_count++;
+        }else{
+            p.status = 'waiting';
         }
+        status_history += ` -> ${p.status}`;
 
         // save to schedule history
         this.queue.push({
             name: p.name,
-            //waiting_time: p.waiting_time,
+            status: status_history,
             cpu_start: this.current_cpu_time,
-            cpu_end: this.current_cpu_time + cpu_time_needed,
-            //status: p.status,
+            cpu_end: p.cpu_end_time,
+            waiting_time: p.waiting_time,
             process: p
         });
 
@@ -140,7 +160,7 @@ class Scheduling{
         // exe
         processes.forEach(p => {
             this.processControl(p);
-        })
+        });
     }
 
 
@@ -190,33 +210,9 @@ class Scheduling{
         this.algorithm_name = 'Round Robin (RR)';
 
         // process by quantum time
-        let is_finished = processes.filter(p => p.status !== 'terminated').length;
-        while(is_finished > 0){
+        while(this.terminated_count < this.processes.length){
             processes.forEach((p, i) => {
-                if(p.status === 'terminated') return;
-
-                const cpu_time_needed = Math.min(p.remaining_time, this.quantum_time);
-                p.status = 'running';
-                p.waiting_time += this.current_cpu_time;
-                p.remaining_time -= cpu_time_needed;
-
-                if(p.remaining_time === 0 && p.status !== 'terminated'){
-                    p.status = 'terminated';
-                    is_finished--;
-                }
-
-                // save to schedule history
-                this.queue.push({
-                    process: p.name,
-                    waiting_time: p.waiting_time,
-                    cpu_start: this.current_cpu_time,
-                    cpu_end: this.current_cpu_time + cpu_time_needed,
-                    status: p.status
-                });
-
-                // update schedule data
-                this.current_cpu_time += cpu_time_needed;
-                this.total_waiting_time += p.waiting_time;
+                this.processControl(p, this.quantum_time);
             });
         }
     }
