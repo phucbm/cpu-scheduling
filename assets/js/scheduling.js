@@ -23,6 +23,9 @@ class Scheduling{
         this.total_RT = 0;
         this.algorithm_name = '';
 
+        this.has_io = options.has_io || false;
+        this.io_queue = [];
+
         switch(this.algorithm){
             case 'FCFS':
                 this.fcfs();

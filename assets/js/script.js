@@ -67,15 +67,16 @@ const solveCau1 = processes => {
  */
 const cau2 = [
     new Process({burst_time: 10, io_arrival_time: 0, io_time: 3}),
-    new Process({burst_time: 1, io_arrival_time: 2, io_time: 1}),
+    new Process({burst_time: 4, io_arrival_time: 2, io_time: 1}),
     new Process({burst_time: 5, io_arrival_time: 3, io_time: 3}),
-    new Process({burst_time: 1, io_arrival_time: 2, io_time: 1}),
+    new Process({burst_time: 3, io_arrival_time: 2, io_time: 1}),
     new Process({burst_time: 5, io_arrival_time: 4, io_time: 2}),
 ];
 const solve2 = processes => {
     // FCFS
     new Scheduling({
         algorithm: 'FCFS',
+        has_io: true,
         processes: JSON.parse(JSON.stringify(processes))
     });
 
@@ -89,7 +90,23 @@ const solve2 = processes => {
     new Scheduling({
         algorithm: 'RR',
         quantum_time: 2,
+        has_io: true,
         processes: JSON.parse(JSON.stringify(processes))
     });
 };
-solve2(cau2);
+//solve2(cau2);
+
+
+/**
+ * Demo RR I/O
+ */
+// RR
+new Scheduling({
+    algorithm: 'RR',
+    quantum_time: 2,
+    has_io: true,
+    processes: [
+        new Process({burst_time: 10, io_arrival_time: 2, io_time: 2}),
+        new Process({burst_time: 9, io_arrival_time: 3, io_time: 2}),
+    ]
+});
