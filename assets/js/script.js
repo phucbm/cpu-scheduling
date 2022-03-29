@@ -31,7 +31,7 @@ const inputData = [lesson02p33, lesson02p28];
 
 
 /**
- * Bai tap
+ * Bai tap: Cau 1
  */
 const cau1 = [
     new Process({arrival_time: 0, burst_time: 10}),
@@ -40,22 +40,56 @@ const cau1 = [
     new Process({arrival_time: 1, burst_time: 1}),
     new Process({arrival_time: 4, burst_time: 5}),
 ];
+const solveCau1 = processes => {
+    // FCFS
+    new Scheduling({
+        algorithm: 'FCFS',
+        processes: JSON.parse(JSON.stringify(processes))
+    });
 
-// FCFS
-new Scheduling({
-    algorithm: 'FCFS',
-    processes: JSON.parse(JSON.stringify(cau1))
-});
+    // SJF
+    new Scheduling({
+        algorithm: 'SJF',
+        processes: JSON.parse(JSON.stringify(processes))
+    });
 
-// SJF
-new Scheduling({
-    algorithm: 'SJF',
-    processes: JSON.parse(JSON.stringify(cau1))
-});
+    // RR
+    new Scheduling({
+        algorithm: 'RR',
+        quantum_time: 2,
+        processes: JSON.parse(JSON.stringify(processes))
+    });
+};
 
-// RR
-new Scheduling({
-    algorithm: 'RR',
-    quantum_time: 2,
-    processes: JSON.parse(JSON.stringify(cau1))
-});
+
+/**
+ * Bai tap: Cau 2
+ */
+const cau2 = [
+    new Process({burst_time: 10, io_arrival_time: 0, io_time: 3}),
+    new Process({burst_time: 1, io_arrival_time: 2, io_time: 1}),
+    new Process({burst_time: 5, io_arrival_time: 3, io_time: 3}),
+    new Process({burst_time: 1, io_arrival_time: 2, io_time: 1}),
+    new Process({burst_time: 5, io_arrival_time: 4, io_time: 2}),
+];
+const solve2 = processes => {
+    // FCFS
+    new Scheduling({
+        algorithm: 'FCFS',
+        processes: JSON.parse(JSON.stringify(processes))
+    });
+
+    // SJF
+    new Scheduling({
+        algorithm: 'SJF',
+        processes: JSON.parse(JSON.stringify(processes))
+    });
+
+    // RR
+    new Scheduling({
+        algorithm: 'RR',
+        quantum_time: 2,
+        processes: JSON.parse(JSON.stringify(processes))
+    });
+};
+solve2(cau2);
