@@ -51,6 +51,7 @@ class Scheduling{
         console.log('Throughput:', this.throughput());
 
         console.log('Done! <---------')
+        console.log('')
     }
 
     // average waiting time
@@ -96,10 +97,10 @@ class Scheduling{
             // save to schedule history
             this.queue.push({
                 name: p.name,
-                waiting_time: p.waiting_time,
+                //waiting_time: p.waiting_time,
                 cpu_start: this.current_cpu_time,
                 cpu_end: this.current_cpu_time + cpu_time_needed,
-                status: p.status,
+                //status: p.status,
                 process: p
             });
 
@@ -141,10 +142,10 @@ class Scheduling{
                 // save to schedule history
                 this.queue.push({
                     name: p.name,
-                    waiting_time: p.waiting_time,
+                    //waiting_time: p.waiting_time,
                     cpu_start: this.current_cpu_time,
                     cpu_end: this.current_cpu_time + cpu_time_needed,
-                    status: p.status,
+                    //status: p.status,
                     process: p
                 });
 
@@ -174,8 +175,12 @@ class Scheduling{
 
         // get min burst time
         const min_burst_time = Math.min(...ready_processes.map(p => p.burst_time));
+        const min_processes = ready_processes.filter(p => p.burst_time === min_burst_time);
+        if(min_processes.length === 1) return min_processes[0];
 
-        return ready_processes.filter(p => p.burst_time === min_burst_time)[0];
+        // get the min process that comes first
+        const sorted_min_processes = sortArrayByObjectValue(min_processes, 'queue_time');
+        return sorted_min_processes[0];
     }
 
     rr(processes = this.processes){
