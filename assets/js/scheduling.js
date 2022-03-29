@@ -151,9 +151,7 @@ class Scheduling{
         processes = is_sort_needed ? sortArrayByObjectValue(processes, 'queue_time') : processes;
 
         // exe
-        processes.forEach(p => {
-            this.processControl(p);
-        });
+        processes.forEach(p => this.processControl(p));
     }
 
 
@@ -177,10 +175,7 @@ class Scheduling{
 
             // find the process using the "s" function
             const p = this.s(processes)
-
-            if(p){
-                this.processControl(p);
-            }
+            if(p) this.processControl(p);
         }
     }
 
@@ -194,9 +189,7 @@ class Scheduling{
 
         // process by quantum time
         while(this.terminated_count < this.processes.length){
-            processes.forEach((p, i) => {
-                this.processControl(p);
-            });
+            processes.forEach(p => this.processControl(p));
         }
     }
 }
