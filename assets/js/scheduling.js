@@ -38,7 +38,7 @@ class Scheduling{
         }
 
 
-        console.log('---------> Scheduling algorithm:', this.algorithm_name)
+        console.log('--------> Scheduling algorithm:', this.algorithm_name)
 
         console.table(this.queue);
         console.log('Total CPU time:', this.current_cpu_time);
@@ -97,6 +97,7 @@ class Scheduling{
         if(p.status === 'terminated') return;
 
         // run this process
+        let status_history = p.status;
         if(p.status === 'new'){
             // run time
             p.run_time = this.current_cpu_time;
@@ -106,10 +107,12 @@ class Scheduling{
 
             // total RT
             this.total_RT += p.response_time;
+
+            p.status = 'ready';
+            status_history += ` > ${p.status}`;
         }
-        let status_history = p.status;
         p.status = 'running';
-        status_history += ` -> ${p.status}`;
+        status_history += ` > ${p.status}`;
 
         const cpu_time_needed = Math.min(p.remaining_time, p.burst_time, this.quantum_time);
 
@@ -135,9 +138,9 @@ class Scheduling{
             p.status = 'terminated';
             this.terminated_count++;
         }else{
-            p.status = 'waiting';
+            p.status = 'ready';
         }
-        status_history += ` -> ${p.status}`;
+        status_history += ` > ${p.status}`;
 
         // save to schedule history
         this.queue.push({
