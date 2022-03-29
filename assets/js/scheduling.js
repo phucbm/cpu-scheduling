@@ -19,6 +19,7 @@ class Scheduling{
         this.queue = [];
         this.current_cpu_time = 0;
         this.total_waiting_time = 0;
+        this.total_TAT = 0;
         this.algorithm_name = '';
 
         switch(this.algorithm){
@@ -43,11 +44,15 @@ class Scheduling{
         console.log('Total waiting time:', this.total_waiting_time);
         console.log('Average waiting time:', this.awt());
         console.log('Throughput:', this.throughput());
+        console.log('Average TAT:', this.atat());
 
         console.log('Done! <---------')
         console.log('')
     }
 
+    atat(){
+        return this.total_TAT / this.processes.length;
+    }
 
     // average waiting time
     awt(){
@@ -106,6 +111,9 @@ class Scheduling{
         // CPU end time
         p.completion_time = this.current_cpu_time + cpu_time_needed;
 
+        // turnaround time
+        p.turnaround_time = p.completion_time - p.arrival_time;
+
         // update status
         if(p.remaining_time === 0){
             p.status = 'terminated';
@@ -125,13 +133,14 @@ class Scheduling{
             RT: p.run_time,
             BT: p.burst_time,
             WT: p.waiting_time,
-            TAT: p.completion_time - p.arrival_time,
+            TAT: p.turnaround_time,
             process: p
         });
 
         // update schedule data
         this.current_cpu_time += cpu_time_needed;
         this.total_waiting_time += p.waiting_time;
+        this.total_TAT += p.turnaround_time;
     }
 
 
