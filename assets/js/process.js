@@ -4,7 +4,7 @@ class Process{
 
         this.burst_time = options.burst_time || 0; // CPU time
 
-        this.queue_time = options.queue_time || 0; // time to start using CPU
+        this.arrival_time = options.arrival_time || 0; // time to start using CPU
 
         // 1: new
         // 2: ready (for CPU burst)
@@ -19,10 +19,11 @@ class Process{
         //this.decision_mode = 'non-preemptive';
 
         this.cpu_time = 0;
-        this.cpu_end_time = 0;
+        this.completion_time = 0;
         this.waiting_time = 0;
         this.remaining_time = this.burst_time;
         this.response_time = 0;
         this.turnaround_time = 0;
+        this.run_time = 0;
     }
 }

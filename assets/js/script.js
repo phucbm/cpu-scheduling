@@ -14,10 +14,10 @@ const lesson02p28 = {
 const lesson02p33 = {
     algorithm: 'SJF',
     processes: [
-        new Process({queue_time: 0, burst_time: 7}),
-        new Process({queue_time: 2, burst_time: 4}),
-        new Process({queue_time: 4, burst_time: 1}),
-        new Process({queue_time: 5, burst_time: 4}),
+        new Process({arrival_time: 0, burst_time: 7}),
+        new Process({arrival_time: 2, burst_time: 4}),
+        new Process({arrival_time: 4, burst_time: 1}),
+        new Process({arrival_time: 5, burst_time: 4}),
     ]
 };
 
@@ -34,11 +34,11 @@ const inputData = [lesson02p33, lesson02p28];
  * Bai tap
  */
 const cau1 = [
-    new Process({queue_time: 0, burst_time: 10}),
-    new Process({queue_time: 2, burst_time: 1}),
-    new Process({queue_time: 3, burst_time: 5}),
-    new Process({queue_time: 1, burst_time: 1}),
-    new Process({queue_time: 4, burst_time: 5}),
+    new Process({arrival_time: 0, burst_time: 10}),
+    new Process({arrival_time: 2, burst_time: 1}),
+    new Process({arrival_time: 3, burst_time: 5}),
+    new Process({arrival_time: 1, burst_time: 1}),
+    new Process({arrival_time: 4, burst_time: 5}),
 ];
 
 // FCFS

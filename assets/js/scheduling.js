@@ -64,7 +64,7 @@ class Scheduling{
     // return the process with the shortest CPU burst
     s(processes){
         // get all ready processes
-        const ready_processes = processes.filter(p => p.status === 'ready');
+        const ready_processes = processes.filter(p => p.arrival_time <= this.current_cpu_time && p.status === 'new');
         if(ready_processes.length === 1) return ready_processes[0];
 
         // get min burst time
@@ -73,7 +73,7 @@ class Scheduling{
         if(min_processes.length === 1) return min_processes[0];
 
         // get the min process that comes first
-        const sorted_min_processes = sortArrayByObjectValue(min_processes, 'queue_time');
+        const sorted_min_processes = sortArrayByObjectValue(min_processes, 'arrival_time');
         return sorted_min_processes[0];
     }
 
@@ -86,6 +86,7 @@ class Scheduling{
         if(p.status === 'terminated') return;
 
         // run this process
+        if(p.status === 'new') p.run_time = this.current_cpu_time;
         let status_history = p.status;
         p.status = 'running';
         status_history += ` -> ${p.status}`;
@@ -94,16 +95,16 @@ class Scheduling{
 
         // waiting time
         if(p.waiting_time === 0){
-            p.waiting_time = this.current_cpu_time - p.queue_time;
+            p.waiting_time = this.current_cpu_time - p.arrival_time;
         }else{
-            p.waiting_time += this.current_cpu_time - p.cpu_end_time;
+            p.waiting_time += this.current_cpu_time - p.completion_time;
         }
 
         // remaining time
         p.remaining_time -= cpu_time_needed;
 
         // CPU end time
-        p.cpu_end_time = this.current_cpu_time + cpu_time_needed;
+        p.completion_time = this.current_cpu_time + cpu_time_needed;
 
         // update status
         if(p.remaining_time === 0){
@@ -119,8 +120,12 @@ class Scheduling{
             name: p.name,
             status: status_history,
             cpu_start: this.current_cpu_time,
-            cpu_end: p.cpu_end_time,
-            waiting_time: p.waiting_time,
+            cpu_end: p.completion_time,
+            AT: p.arrival_time,
+            RT: p.run_time,
+            BT: p.burst_time,
+            WT: p.waiting_time,
+            TAT: p.completion_time - p.arrival_time,
             process: p
         });
 
@@ -138,17 +143,17 @@ class Scheduling{
         this.algorithm_name = 'First Come First Served (FCFS)';
 
         // check is sort need
-        let prev_queue_time = 0;
+        let prev_arrival_time = 0;
         let is_sort_needed = false;
         processes.forEach(p => {
-            if(prev_queue_time !== p.queue_time){
+            if(prev_arrival_time !== p.arrival_time){
                 is_sort_needed = true;
             }
-            prev_queue_time = p.queue_time;
+            prev_arrival_time = p.arrival_time;
         });
 
         // sort by queue time
-        processes = is_sort_needed ? sortArrayByObjectValue(processes, 'queue_time') : processes;
+        processes = is_sort_needed ? sortArrayByObjectValue(processes, 'arrival_time') : processes;
 
         // exe
         processes.forEach(p => this.processControl(p));
@@ -165,13 +170,6 @@ class Scheduling{
         // keep looping until all processes are terminated
 
         while(this.terminated_count < this.processes.length){
-            // check new processes if they are ready for cpu burst
-            processes.forEach(p => {
-                // READY
-                if(p.queue_time <= this.current_cpu_time && p.status === 'new'){
-                    p.status = 'ready';
-                }
-            });
 
             // find the process using the "s" function
             const p = this.s(processes)
