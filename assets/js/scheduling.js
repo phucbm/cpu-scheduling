@@ -1,5 +1,7 @@
 class Scheduling{
     constructor(options){
+        this.loop = 0;
+
         this.quantum_time = options.quantum_time || 99999999;
         this.processes = options.processes || []; // list of processes
 
@@ -50,6 +52,7 @@ class Scheduling{
         console.log('Throughput:', this.throughput());
         console.log('Average TAT:', this.atat());
         console.log('Average RT:', this.art());
+        console.table(this.io_queue);
 
         console.log('Done! <---------')
         console.log('')
@@ -114,55 +117,84 @@ class Scheduling{
             p.status = 'ready';
             status_history += ` > ${p.status}`;
         }
-        p.status = 'running';
-        status_history += ` > ${p.status}`;
 
-        const cpu_time_needed = Math.min(p.remaining_time, p.burst_time, this.quantum_time);
 
-        // waiting time
-        if(p.waiting_time === 0){
-            p.waiting_time = this.current_cpu_time - p.arrival_time;
+        // I/O checkpoint
+        const is_begin_io = p.io_arrival_time <= this.current_cpu_time && p.status === 'ready';
+
+        if(is_begin_io){
+            /**
+             * I/O process
+             */
+
+            p.status = 'waiting'; // waiting for I/O
+
+            console.log(`${p.name} I/O`, is_begin_io, this.current_cpu_time, p.io_arrival_time, p.io_time)
+
+            this.io_queue.push({
+                name: p.name,
+                io_start: this.current_cpu_time,
+                io_end: this.current_cpu_time + p.io_time
+            });
+
+            if(this.loop > 10) this.terminated_count++;
         }else{
-            p.waiting_time += this.current_cpu_time - p.completion_time;
+            /**
+             * Non I/O process
+             */
+            p.status = 'running';
+            status_history += ` > ${p.status}`;
+
+            const cpu_time_needed = Math.min(p.remaining_time, p.burst_time, this.quantum_time);
+
+            // waiting time
+            if(p.waiting_time === 0){
+                p.waiting_time = this.current_cpu_time - p.arrival_time;
+            }else{
+                p.waiting_time += this.current_cpu_time - p.completion_time;
+            }
+
+            // remaining time
+            p.remaining_time -= cpu_time_needed;
+
+            // CPU end time
+            p.completion_time = this.current_cpu_time + cpu_time_needed;
+
+            // turnaround time
+            p.turnaround_time = p.completion_time - p.arrival_time;
+
+
+            // update status
+            if(p.remaining_time === 0){
+                p.status = 'terminated';
+                this.terminated_count++;
+            }else{
+                p.status = 'ready';
+            }
+            status_history += ` > ${p.status}`;
+
+            // save to schedule history
+            this.queue.push({
+                name: p.name,
+                status: status_history,
+                cpu_start: this.current_cpu_time,
+                cpu_end: p.completion_time,
+                //AT: p.arrival_time,
+                //RT: p.response_time,
+                //BT: p.burst_time,
+                //WT: p.waiting_time,
+                //TAT: p.turnaround_time,
+                process: p
+            });
+
+            // update schedule data
+            this.current_cpu_time += cpu_time_needed;
+            this.total_waiting_time += p.waiting_time;
+            this.total_TAT += p.turnaround_time;
         }
 
-        // remaining time
-        p.remaining_time -= cpu_time_needed;
 
-        // CPU end time
-        p.completion_time = this.current_cpu_time + cpu_time_needed;
-
-        // turnaround time
-        p.turnaround_time = p.completion_time - p.arrival_time;
-
-
-        // update status
-        if(p.remaining_time === 0){
-            p.status = 'terminated';
-            this.terminated_count++;
-        }else{
-            p.status = 'ready';
-        }
-        status_history += ` > ${p.status}`;
-
-        // save to schedule history
-        this.queue.push({
-            name: p.name,
-            status: status_history,
-            cpu_start: this.current_cpu_time,
-            cpu_end: p.completion_time,
-            AT: p.arrival_time,
-            RT: p.response_time,
-            BT: p.burst_time,
-            WT: p.waiting_time,
-            TAT: p.turnaround_time,
-            process: p
-        });
-
-        // update schedule data
-        this.current_cpu_time += cpu_time_needed;
-        this.total_waiting_time += p.waiting_time;
-        this.total_TAT += p.turnaround_time;
+        this.loop++;
     }
 
 

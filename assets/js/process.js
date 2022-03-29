@@ -6,8 +6,8 @@ class Process{
 
         this.arrival_time = options.arrival_time || 0; // time to start using CPU
 
-        this.io_arrival_time = 0;
-        this.io_time = 0;
+        this.io_arrival_time = options.io_arrival_time || 0;
+        this.io_time = options.io_time || 0;
 
         // 1: new
         // 2: ready (for CPU burst)
