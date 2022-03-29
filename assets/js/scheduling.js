@@ -20,6 +20,7 @@ class Scheduling{
         this.current_cpu_time = 0;
         this.total_waiting_time = 0;
         this.total_TAT = 0;
+        this.total_RT = 0;
         this.algorithm_name = '';
 
         switch(this.algorithm){
@@ -45,9 +46,14 @@ class Scheduling{
         console.log('Average waiting time:', this.awt());
         console.log('Throughput:', this.throughput());
         console.log('Average TAT:', this.atat());
+        console.log('Average RT:', this.art());
 
         console.log('Done! <---------')
         console.log('')
+    }
+
+    art(){
+        return this.total_RT / this.processes.length;
     }
 
     atat(){
@@ -91,7 +97,16 @@ class Scheduling{
         if(p.status === 'terminated') return;
 
         // run this process
-        if(p.status === 'new') p.run_time = this.current_cpu_time;
+        if(p.status === 'new'){
+            // run time
+            p.run_time = this.current_cpu_time;
+
+            // response time
+            p.response_time = p.run_time - p.arrival_time;
+
+            // total RT
+            this.total_RT += p.response_time;
+        }
         let status_history = p.status;
         p.status = 'running';
         status_history += ` -> ${p.status}`;
@@ -114,6 +129,7 @@ class Scheduling{
         // turnaround time
         p.turnaround_time = p.completion_time - p.arrival_time;
 
+
         // update status
         if(p.remaining_time === 0){
             p.status = 'terminated';
@@ -130,7 +146,7 @@ class Scheduling{
             cpu_start: this.current_cpu_time,
             cpu_end: p.completion_time,
             AT: p.arrival_time,
-            RT: p.run_time,
+            RT: p.response_time,
             BT: p.burst_time,
             WT: p.waiting_time,
             TAT: p.turnaround_time,
