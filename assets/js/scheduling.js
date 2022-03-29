@@ -1,18 +1,12 @@
 class Scheduling{
     constructor(options){
-        this.loop_step = 1;
-        this.loop_count = 0;
-        this.loop_max = 20;
-
-        this.quantum_time = options.quantum_time || 1;
+        this.quantum_time = options.quantum_time || 99999999;
         this.processes = options.processes || []; // list of processes
 
         // check process's names if empty
         this.processes.forEach((p, i) => {
             p.name = p.name.length ? p.name : `P${i + 1}`;
-            //p.queue_time = p.queue_time ? p.queue_time : i;
         });
-        //this.processes = sortArrayByObjectValue(this.processes, 'queue_time');
 
         console.log('List of processes:')
         console.table(this.processes)
@@ -87,9 +81,8 @@ class Scheduling{
     /**
      * Process Control Block
      * @param p
-     * @param quantum_time
      */
-    processControl(p, quantum_time = 9999999){
+    processControl(p){
         if(p.status === 'terminated') return;
 
         // run this process
@@ -97,7 +90,7 @@ class Scheduling{
         p.status = 'running';
         status_history += ` -> ${p.status}`;
 
-        const cpu_time_needed = Math.min(p.remaining_time, p.burst_time, quantum_time);
+        const cpu_time_needed = Math.min(p.remaining_time, p.burst_time, this.quantum_time);
 
         // waiting time
         if(p.waiting_time === 0){
@@ -172,7 +165,8 @@ class Scheduling{
         this.algorithm_name = 'Shortest-Job-First (SJF)';
 
         // keep looping until all processes are terminated
-        for(let i = this.loop_count; i += this.loop_step; i < this.loop_max){
+
+        while(this.terminated_count < this.processes.length){
             // check new processes if they are ready for cpu burst
             processes.forEach(p => {
                 // READY
@@ -187,17 +181,6 @@ class Scheduling{
             if(p){
                 this.processControl(p);
             }
-
-
-            // ----------------------------------
-            // avoid starvation
-            this.loop_count += this.loop_step;
-            if(this.loop_count >= this.loop_max) this.is_finished = true;
-
-            if(this.terminated_count === this.processes.length) this.is_finished = true;
-
-            // finish scheduling
-            if(this.is_finished) break;
         }
     }
 
@@ -212,7 +195,7 @@ class Scheduling{
         // process by quantum time
         while(this.terminated_count < this.processes.length){
             processes.forEach((p, i) => {
-                this.processControl(p, this.quantum_time);
+                this.processControl(p);
             });
         }
     }
