@@ -54,16 +54,73 @@ class Scheduling{
         console.log('')
     }
 
+
     // average waiting time
     awt(){
         return this.total_waiting_time / this.processes.length;
     }
+
 
     // average waiting time
     throughput(){
         return Math.round(this.processes.length / this.current_cpu_time * 10000) / 10000;
     }
 
+
+    // return the process with the shortest CPU burst
+    s(processes){
+        // get all ready processes
+        const ready_processes = processes.filter(p => p.status === 'ready');
+        if(ready_processes.length === 1) return ready_processes[0];
+
+        // get min burst time
+        const min_burst_time = Math.min(...ready_processes.map(p => p.burst_time));
+        const min_processes = ready_processes.filter(p => p.burst_time === min_burst_time);
+        if(min_processes.length === 1) return min_processes[0];
+
+        // get the min process that comes first
+        const sorted_min_processes = sortArrayByObjectValue(min_processes, 'queue_time');
+        return sorted_min_processes[0];
+    }
+
+
+    /**
+     * Process Control Block
+     * @param p
+     */
+    processControl(p){
+        // run this process
+        p.status = 'running';
+
+        const cpu_time_needed = Math.min(p.remaining_time, p.burst_time);
+        p.waiting_time = this.current_cpu_time - p.queue_time;
+        p.remaining_time -= cpu_time_needed;
+
+        if(p.remaining_time === 0){
+            p.status = 'terminated';
+            this.terminated_count++;
+        }
+
+        // save to schedule history
+        this.queue.push({
+            name: p.name,
+            //waiting_time: p.waiting_time,
+            cpu_start: this.current_cpu_time,
+            cpu_end: this.current_cpu_time + cpu_time_needed,
+            //status: p.status,
+            process: p
+        });
+
+        // update schedule data
+        this.current_cpu_time += cpu_time_needed;
+        this.total_waiting_time += p.waiting_time;
+    }
+
+
+    /**
+     * First Come First Served (FCFS)
+     * @param processes
+     */
     fcfs(processes = this.processes){
         this.algorithm_name = 'First Come First Served (FCFS)';
 
@@ -82,34 +139,15 @@ class Scheduling{
 
         // exe
         processes.forEach(p => {
-            // run this process
-            p.status = 'running';
-
-            const cpu_time_needed = Math.min(p.remaining_time, p.burst_time);
-            p.waiting_time = this.current_cpu_time - p.queue_time;
-            p.remaining_time -= cpu_time_needed;
-
-            if(p.remaining_time === 0){
-                p.status = 'terminated';
-                this.terminated_count++;
-            }
-
-            // save to schedule history
-            this.queue.push({
-                name: p.name,
-                //waiting_time: p.waiting_time,
-                cpu_start: this.current_cpu_time,
-                cpu_end: this.current_cpu_time + cpu_time_needed,
-                //status: p.status,
-                process: p
-            });
-
-            // update schedule data
-            this.current_cpu_time += cpu_time_needed;
-            this.total_waiting_time += p.waiting_time;
+            this.processControl(p);
         })
     }
 
+
+    /**
+     * Shortest-Job-First (SJF)
+     * @param processes
+     */
     sjf(processes = this.processes){
         this.algorithm_name = 'Shortest-Job-First (SJF)';
 
@@ -127,31 +165,7 @@ class Scheduling{
             const p = this.s(processes)
 
             if(p){
-                // run this process
-                p.status = 'running';
-
-                const cpu_time_needed = Math.min(p.remaining_time, p.burst_time);
-                p.waiting_time = this.current_cpu_time - p.queue_time;
-                p.remaining_time -= cpu_time_needed;
-
-                if(p.remaining_time === 0){
-                    p.status = 'terminated';
-                    this.terminated_count++;
-                }
-
-                // save to schedule history
-                this.queue.push({
-                    name: p.name,
-                    //waiting_time: p.waiting_time,
-                    cpu_start: this.current_cpu_time,
-                    cpu_end: this.current_cpu_time + cpu_time_needed,
-                    //status: p.status,
-                    process: p
-                });
-
-                // update schedule data
-                this.current_cpu_time += cpu_time_needed;
-                this.total_waiting_time += p.waiting_time;
+                this.processControl(p);
             }
 
 
@@ -167,22 +181,11 @@ class Scheduling{
         }
     }
 
-    // return the process with the shortest CPU burst
-    s(processes){
-        // get all ready processes
-        const ready_processes = processes.filter(p => p.status === 'ready');
-        if(ready_processes.length === 1) return ready_processes[0];
 
-        // get min burst time
-        const min_burst_time = Math.min(...ready_processes.map(p => p.burst_time));
-        const min_processes = ready_processes.filter(p => p.burst_time === min_burst_time);
-        if(min_processes.length === 1) return min_processes[0];
-
-        // get the min process that comes first
-        const sorted_min_processes = sortArrayByObjectValue(min_processes, 'queue_time');
-        return sorted_min_processes[0];
-    }
-
+    /**
+     * Round Robin
+     * @param processes
+     */
     rr(processes = this.processes){
         this.algorithm_name = 'Round Robin (RR)';
 
