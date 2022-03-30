@@ -8,8 +8,8 @@ class Process{
 
         this.io_arrival_time = options.io_arrival_time || 0;
         this.io_time = options.io_time || 0;
-        this.io_start = 0;
-        this.io_end = 0;
+        this.io_start = -1;
+        this.io_end = 9999999;
 
         // 1: new
         // 2: ready (for CPU burst)

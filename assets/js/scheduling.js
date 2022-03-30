@@ -102,11 +102,9 @@ class Scheduling{
     processControl(p){
         if(p.status === 'terminated') return;
 
-
         let status_history = p.status;
 
-
-        // run this process
+        // start this process
         if(p.status === 'new'){
             // run time
             p.run_time = this.current_cpu_time;
@@ -122,19 +120,25 @@ class Scheduling{
         }
 
 
-        let is_io = this.current_cpu_time < p.io_end;
+        let is_io = this.is_io(p);
+
+        // finish I/O
+        if(this.is_io_finished(p)){
+            p.status = 'ready';
+            status_history += ` > ${p.status} io done`;
+        }
 
         // I/O checkpoint
-        if(p.status !== 'waiting' && !is_io){
+        if(!is_io){
             // CPU using
             let is_begin_io = false, served_time = 0;
             served_time = p.burst_time - p.remaining_time;
             is_begin_io = served_time >= p.io_arrival_time && p.status === 'ready';
 
 
-            if(is_begin_io){
+            if(is_begin_io && !this.is_io_finished(p)){
                 /**
-                 * I/O process
+                 * Ready for I/O process
                  */
                 p.status = 'waiting'; // for I/O
                 status_history += ` > ${p.status}`;
@@ -181,7 +185,7 @@ class Scheduling{
                 let cpu_time_needed = Math.min(p.remaining_time, p.burst_time, this.quantum_time);
 
                 // check for I/O arrival
-                if(served_time + cpu_time_needed > p.io_arrival_time){
+                if(!this.is_io_finished(p) && served_time + cpu_time_needed > p.io_arrival_time){
                     cpu_time_needed -= served_time + cpu_time_needed - p.io_arrival_time;
                 }
 
@@ -219,7 +223,8 @@ class Scheduling{
                     cpu_end: p.completion_time,
                     //AT: p.arrival_time,
                     //RT: p.response_time,
-                    //BT: p.burst_time,
+                    BT: p.burst_time,
+                    remain: p.remaining_time,
                     //WT: p.waiting_time,
                     //TAT: p.turnaround_time,
                     process: p
@@ -233,12 +238,9 @@ class Scheduling{
         }
 
         // begin I/O
-        if(p.status === 'waiting'){
-            p.status = 'ready';
-            status_history += ` > ${p.status}`;
-
+        if(p.status === 'waiting' && !is_io){
             // I/O start/end
-            p.io_start = p.io_start === 0 ? this.current_cpu_time : p.io_start;
+            p.io_start = p.io_start === -1 ? this.current_cpu_time : p.io_start;
             p.io_end = p.io_start + p.io_time;
 
             // I/O timeline
@@ -246,19 +248,41 @@ class Scheduling{
                 name: p.name,
                 status: status_history,
                 io_start: p.io_start,
-                io_end: p.io_end
+                io_end: p.io_end,
+                io_time: p.io_time
             });
         }
 
-        // I/O -ing
-        if(is_io && p.status === 'waiting'){
-            this.current_cpu_time += 1;
-        }
-
-        if(this.loop > 10) this.terminated_count++;
+        // avoid starvation
         this.loop++;
+        if(this.loop > 10){
+            console.log(`Loop exceed! ${this.terminated_count}`, this.current_cpu_time, p.name, is_io, p.status)
+            this.terminated_count++;
+            this.loop = 0;
+        }
     }
 
+
+    is_io_start(p){
+        // I/O starts when its status is "ready" and served time is <= I/O arrival time
+        const served_time = p.burst_time - p.remaining_time;
+        return served_time >= p.io_arrival_time && p.status === 'ready';
+    }
+
+    is_io(p){
+        const is_io_started = p.io_start >= 0;
+        const is_io_not_finished = this.current_cpu_time < p.io_end;
+        const is_io = is_io_started && is_io_not_finished && p.status === 'waiting';
+
+        //console.log(`Check I/O`, p.name, p.io_start, p.io_end, this.current_cpu_time, is_io)
+
+        return is_io;
+    }
+
+    is_io_finished(p){
+        // I/O is finished when it has started and not I/O anymore
+        return this.is_io_start(p) && !this.is_io(p);
+    }
 
     /**
      * First Come First Served (FCFS)
@@ -303,6 +327,11 @@ class Scheduling{
     }
 
 
+    is_all_process_waiting(processes = this.processes){
+        return processes.filter(p => p.status === 'waiting').length === processes.length;
+    }
+
+
     /**
      * Round Robin
      * @param processes
@@ -312,7 +341,10 @@ class Scheduling{
 
         // process by quantum time
         while(this.terminated_count < this.processes.length){
+            //console.log('is_all_process_waiting', this.is_all_process_waiting(processes), this.current_cpu_time)
             processes.forEach(p => this.processControl(p));
+
+            if(this.is_all_process_waiting(processes)) this.current_cpu_time += 1;
         }
     }
 }
