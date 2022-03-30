@@ -106,7 +106,7 @@ new Scheduling({
     quantum_time: 2,
     has_io: true,
     processes: [
-        new Process({burst_time: 10, io_arrival_time: 2, io_time: 2}),
-        new Process({burst_time: 9, io_arrival_time: 3, io_time: 2}),
+        new Process({name: 'A', burst_time: 10, io_arrival_time: 2, io_time: 2}),
+        new Process({name: 'B', burst_time: 9, io_arrival_time: 3, io_time: 2}),
     ]
 });

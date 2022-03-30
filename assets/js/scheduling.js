@@ -102,8 +102,11 @@ class Scheduling{
     processControl(p){
         if(p.status === 'terminated') return;
 
-        // run this process
+
         let status_history = p.status;
+
+
+        // run this process
         if(p.status === 'new'){
             // run time
             p.run_time = this.current_cpu_time;
@@ -119,81 +122,140 @@ class Scheduling{
         }
 
 
+        let is_io = this.current_cpu_time < p.io_end;
+
         // I/O checkpoint
-        const is_begin_io = p.io_arrival_time <= this.current_cpu_time && p.status === 'ready';
+        if(p.status !== 'waiting' && !is_io){
+            // CPU using
+            let is_begin_io = false, served_time = 0;
+            served_time = p.burst_time - p.remaining_time;
+            is_begin_io = served_time >= p.io_arrival_time && p.status === 'ready';
 
-        if(is_begin_io){
-            /**
-             * I/O process
-             */
 
-            p.status = 'waiting'; // waiting for I/O
+            if(is_begin_io){
+                /**
+                 * I/O process
+                 */
+                p.status = 'waiting'; // for I/O
+                status_history += ` > ${p.status}`;
 
-            console.log(`${p.name} I/O`, is_begin_io, this.current_cpu_time, p.io_arrival_time, p.io_time)
+                const cpu_time_needed = 0;
 
-            this.io_queue.push({
-                name: p.name,
-                io_start: this.current_cpu_time,
-                io_end: this.current_cpu_time + p.io_time
-            });
+                // waiting time
+                if(p.waiting_time === 0){
+                    p.waiting_time = this.current_cpu_time - p.arrival_time;
+                }else{
+                    p.waiting_time += this.current_cpu_time - p.completion_time;
+                }
 
-            if(this.loop > 10) this.terminated_count++;
-        }else{
-            /**
-             * Non I/O process
-             */
-            p.status = 'running';
-            status_history += ` > ${p.status}`;
+                // remaining time
+                p.remaining_time -= cpu_time_needed;
 
-            const cpu_time_needed = Math.min(p.remaining_time, p.burst_time, this.quantum_time);
+                // CPU end time
+                p.completion_time = this.current_cpu_time + cpu_time_needed;
 
-            // waiting time
-            if(p.waiting_time === 0){
-                p.waiting_time = this.current_cpu_time - p.arrival_time;
+                // turnaround time
+                p.turnaround_time = p.completion_time - p.arrival_time;
+
+                // save to schedule history
+                this.queue.push({
+                    name: p.name,
+                    status: status_history,
+                    cpu_start: this.current_cpu_time,
+                    cpu_end: p.completion_time,
+                    //AT: p.arrival_time,
+                    //RT: p.response_time,
+                    //BT: p.burst_time,
+                    //WT: p.waiting_time,
+                    //TAT: p.turnaround_time,
+                    process: p
+                });
+
             }else{
-                p.waiting_time += this.current_cpu_time - p.completion_time;
+                /**
+                 * Non I/O process
+                 */
+                p.status = 'running';
+                status_history += ` > ${p.status}`;
+
+                let cpu_time_needed = Math.min(p.remaining_time, p.burst_time, this.quantum_time);
+
+                // check for I/O arrival
+                if(served_time + cpu_time_needed > p.io_arrival_time){
+                    cpu_time_needed -= served_time + cpu_time_needed - p.io_arrival_time;
+                }
+
+                // CPU end time
+                p.completion_time = this.current_cpu_time + cpu_time_needed;
+
+                // waiting time
+                if(p.waiting_time === 0){
+                    p.waiting_time = this.current_cpu_time - p.arrival_time;
+                }else{
+                    p.waiting_time += this.current_cpu_time - p.completion_time;
+                }
+
+                // remaining time
+                p.remaining_time -= cpu_time_needed;
+
+                // turnaround time
+                p.turnaround_time = p.completion_time - p.arrival_time;
+
+
+                // update status
+                if(p.remaining_time === 0){
+                    p.status = 'terminated';
+                    this.terminated_count++;
+                }else{
+                    p.status = 'ready';
+                }
+                status_history += ` > ${p.status}`;
+
+                // save to schedule history
+                this.queue.push({
+                    name: p.name,
+                    status: status_history,
+                    cpu_start: this.current_cpu_time,
+                    cpu_end: p.completion_time,
+                    //AT: p.arrival_time,
+                    //RT: p.response_time,
+                    //BT: p.burst_time,
+                    //WT: p.waiting_time,
+                    //TAT: p.turnaround_time,
+                    process: p
+                });
+
+                // update schedule data
+                this.current_cpu_time += cpu_time_needed;
+                this.total_waiting_time += p.waiting_time;
+                this.total_TAT += p.turnaround_time;
             }
-
-            // remaining time
-            p.remaining_time -= cpu_time_needed;
-
-            // CPU end time
-            p.completion_time = this.current_cpu_time + cpu_time_needed;
-
-            // turnaround time
-            p.turnaround_time = p.completion_time - p.arrival_time;
-
-
-            // update status
-            if(p.remaining_time === 0){
-                p.status = 'terminated';
-                this.terminated_count++;
-            }else{
-                p.status = 'ready';
-            }
-            status_history += ` > ${p.status}`;
-
-            // save to schedule history
-            this.queue.push({
-                name: p.name,
-                status: status_history,
-                cpu_start: this.current_cpu_time,
-                cpu_end: p.completion_time,
-                //AT: p.arrival_time,
-                //RT: p.response_time,
-                //BT: p.burst_time,
-                //WT: p.waiting_time,
-                //TAT: p.turnaround_time,
-                process: p
-            });
-
-            // update schedule data
-            this.current_cpu_time += cpu_time_needed;
-            this.total_waiting_time += p.waiting_time;
-            this.total_TAT += p.turnaround_time;
         }
 
+        // begin I/O
+        if(p.status === 'waiting'){
+            p.status = 'ready';
+            status_history += ` > ${p.status}`;
 
+            // I/O start/end
+            p.io_start = p.io_start === 0 ? this.current_cpu_time : p.io_start;
+            p.io_end = p.io_start + p.io_time;
+
+            // I/O timeline
+            this.io_queue.push({
+                name: p.name,
+                status: status_history,
+                io_start: p.io_start,
+                io_end: p.io_end
+            });
+        }
+
+        // I/O -ing
+        if(is_io && p.status === 'waiting'){
+            this.current_cpu_time += 1;
+        }
+
+        if(this.loop > 10) this.terminated_count++;
         this.loop++;
     }
 
